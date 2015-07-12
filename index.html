@@ -1,0 +1,82 @@
+<!doctype html>
+
+<meta charset="utf-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
+<title>COBRA SBML validator</title>
+
+<!--dropzone-->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/dropzone/4.0.1/min/dropzone.min.css" />
+<script src="https://cdnjs.cloudflare.com/ajax/libs/dropzone/4.0.1/min/dropzone.min.js"></script>
+
+<!--bootstrap-->
+<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.5/css/bootstrap.min.css">
+
+
+<style>
+div.row {
+    margin-top: 1em;
+    padding: 0.5em;
+    border-radius: 0.5em;
+}
+</style>
+
+<script>
+
+function update_result(file, response) {
+    result_list_div = document.getElementById("results");
+    result_div = result_list_div.appendChild(document.createElement("div"));
+    result_div.className = "row";
+    results = JSON.parse(response);
+
+    // build the result str
+    result_str = "<strong>" + file.name + "</strong>&nbsp;-&nbsp;";
+    if (results.sbml_errors.length == 0) {
+        result_div.className += " bg-success";
+        result_str += "No errors<br>"
+        file.previewElement.querySelector(".dz-success-mark").style.opacity = 1;
+    }
+    else {
+        result_str += results.sbml_errors.length + " error";
+        if (results.sbml_errors.length > 1) result_str += "s";
+        // update the error message on the dropzone preview
+        msg = file.previewElement.querySelector(".dz-error-message").getElementsByTagName("span")[0];
+        msg.innerHTML = result_str;
+        file.previewElement.classList.remove("dz-success");
+        file.previewElement.classList.add("dz-error");
+        
+        // display the rest of the errors in the result_list
+        result_div.className += " bg-danger";
+        result_str += "<br>";
+        for (var i = 0; i < results.sbml_errors.length; i++) {
+            result_str += results.sbml_errors[i] + "<br>";
+        }
+    }
+    // result_str += "solution status: " + results.solution_status + "<br>";
+    result_str += "objective value: " + results.objective;
+
+    // add result str to result_div
+    span = result_div.appendChild(document.createElement("span"));
+    span.innerHTML = result_str;
+}
+
+Dropzone.options.uploader = {
+    uploadMultiple: false,
+    maxFilesize: 25,
+    init: function () {
+        this.on("success", update_result);
+    },
+};
+
+</script>
+
+<body>
+    <h1>Validate COBRA models in SBML</h1>
+    <div id="dropzone" class="container">
+        <form action="upload" class="dropzone" id="uploader">
+            <div class="dz-message">Drop SBML files here or click to upload. Compressed (gz and bz2) files are also accepted.</div>
+        </form>
+    </div>
+    <div id="results" class="container"></div>
+</body>
