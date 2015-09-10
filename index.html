@@ -53,7 +53,6 @@ function update_result(file, response) {
             result_str += results.sbml_errors[i] + "<br>";
         }
     }
-    // result_str += "solution status: " + results.solution_status + "<br>";
     result_str += "objective value: " + results.objective;
 
     // add result str to result_div
@@ -61,11 +60,21 @@ function update_result(file, response) {
     span.innerHTML = result_str;
 }
 
+function onUploadFail(file, errorMsg, was_xhr) {
+    result_list_div = document.getElementById("results");
+    result_div = result_list_div.appendChild(document.createElement("div"));
+    result_div.className = "row bg-danger";
+    result_str = "<strong>" + file.name + "</strong>&nbsp;-&nbsp;";
+    result_str += "Invalid file<br>" + errorMsg;
+    result_div.innerHTML = result_str;
+}
+
 Dropzone.options.uploader = {
     uploadMultiple: false,
     maxFilesize: 25,
     init: function () {
         this.on("success", update_result);
+        this.on("error", onUploadFail);
     },
 };
 

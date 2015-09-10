@@ -34,7 +34,14 @@ class Upload(tornado.web.RequestHandler):
             zip_contents = StringIO(body)
             contents = StringIO()
             with GzipFile(fileobj=zip_contents, mode='rb') as zip_read:
-                contents = StringIO(zip_read.read())
+                try:
+                    contents = StringIO(zip_read.read())
+                except IOError as e:
+                    self.send_error(415,
+                                    reason="Error decompressing gzip file: " +
+                                    e.message)
+                    return
+
             zip_contents.close()
         elif filename.endswith(".bz2"):
             zip_contents = StringIO(body)
