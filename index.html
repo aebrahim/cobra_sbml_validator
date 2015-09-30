@@ -32,14 +32,15 @@ function update_result(file, response) {
 
     // build the result str
     result_str = "<strong>" + file.name + "</strong>&nbsp;-&nbsp;";
-    if (results.sbml_errors.length == 0) {
+    if (results.errors.length == 0 && results.errors.length == 0) {
         result_div.className += " bg-success";
         result_str += "No errors<br>"
         file.previewElement.querySelector(".dz-success-mark").style.opacity = 1;
     }
     else {
-        result_str += results.sbml_errors.length + " error";
-        if (results.sbml_errors.length > 1) result_str += "s";
+        n_mistake = 
+        result_str += results.errors.length + " error";
+        if (results.errors.length > 1) result_str += "s";
         // update the error message on the dropzone preview
         msg = file.previewElement.querySelector(".dz-error-message").getElementsByTagName("span")[0];
         msg.innerHTML = result_str;
@@ -49,8 +50,8 @@ function update_result(file, response) {
         // display the rest of the errors in the result_list
         result_div.className += " bg-danger";
         result_str += "<br>";
-        for (var i = 0; i < results.sbml_errors.length; i++) {
-            result_str += results.sbml_errors[i] + "<br>";
+        for (var i = 0; i < results.errors.length; i++) {
+            result_str += results.errors[i] + "<br>";
         }
     }
     result_str += "objective value: " + results.objective;
@@ -81,10 +82,10 @@ Dropzone.options.uploader = {
 </script>
 
 <body>
-    <h1>Validate COBRA models in SBML</h1>
+    <h1>Validate COBRA models in SBML or JSON</h1>
     <div id="dropzone" class="container">
         <form action="upload" class="dropzone" id="uploader">
-            <div class="dz-message">Drop SBML files here or click to upload. Compressed (gz and bz2) files are also accepted.</div>
+            <div class="dz-message">Drop SBML/JSON files here or click to upload. Compressed (gz and bz2) files are also accepted.</div>
         </form>
     </div>
     <div id="results" class="container"></div>
