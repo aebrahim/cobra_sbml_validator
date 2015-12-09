@@ -15,10 +15,6 @@ import jsonschema
 import cobra
 
 
-invalid_id_detector = re.compile("|".join(
-    re.escape(i[0]) for i in cobra.manipulation.modify._renames))
-
-
 class Userform(tornado.web.RequestHandler):
     def get(self):
         self.render("index.html")
@@ -81,6 +77,10 @@ class Upload(tornado.web.RequestHandler):
             except cobra.io.sbml3.CobraSBMLError as e:
                 self.send_error(415, reason=e.message)
                 return
+
+        if model is None:
+            self.finish(dumps({"errors": errors, "warnings": []}))
+            return
 
         # model validation
         warnings = []

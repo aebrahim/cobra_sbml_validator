@@ -32,29 +32,42 @@ function update_result(file, response) {
 
     // build the result str
     result_str = "<strong>" + file.name + "</strong>&nbsp;-&nbsp;";
-    if (results.errors.length == 0 && results.errors.length == 0) {
+    if (results.errors.length == 0 && results.warnings.length == 0) {
         result_div.className += " bg-success";
         result_str += "No errors<br>"
         file.previewElement.querySelector(".dz-success-mark").style.opacity = 1;
     }
     else {
-        n_mistake = 
         result_str += results.errors.length + " error";
-        if (results.errors.length > 1) result_str += "s";
+        if (results.errors.length > 1 || results.errors.length == 0) result_str += "s";
+        if (results.warnings.length > 0) {
+            result_str += " and " +  results.warnings.length + " warning";
+            if (results.warnings.length > 1) result_str += "s";
+        }
         // update the error message on the dropzone preview
         msg = file.previewElement.querySelector(".dz-error-message").getElementsByTagName("span")[0];
         msg.innerHTML = result_str;
-        file.previewElement.classList.remove("dz-success");
-        file.previewElement.classList.add("dz-error");
-        
+        // color as error (or warning if no errors)
+        if (results.errors.length > 0) {
+            file.previewElement.classList.remove("dz-success");
+            file.previewElement.classList.add("dz-error");
+            result_div.className += " bg-danger";
+        }
+        else {
+            result_div.className += " bg-warning";
+        }
+
         // display the rest of the errors in the result_list
-        result_div.className += " bg-danger";
         result_str += "<br>";
         for (var i = 0; i < results.errors.length; i++) {
-            result_str += results.errors[i] + "<br>";
+            result_str += "Error: " + results.errors[i] + "<br>";
+        }
+        for (var i = 0; i < results.warnings.length; i++) {
+            result_str += "Warning: " + results.warnings[i] + "<br>";
         }
     }
-    result_str += "objective value: " + results.objective;
+    if ('objective' in results)
+        result_str += "objective value: " + results.objective;
 
     // add result str to result_div
     span = result_div.appendChild(document.createElement("span"));
