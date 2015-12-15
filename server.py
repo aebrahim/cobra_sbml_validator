@@ -14,6 +14,8 @@ import jsonschema
 
 import cobra
 
+from validator import validate_model
+
 
 class Userform(tornado.web.RequestHandler):
     def get(self):
@@ -83,21 +85,8 @@ class Upload(tornado.web.RequestHandler):
             return
 
         # model validation
-        warnings = []
-        solution = model.optimize(solver="esolver")
-        if solution.status != "optimal":
-            errors.append("model can not be solved (status '%s')" %
-                          solution.satus)
-        elif solution.f <= 0:
-            warnings.append("model can not produce nonzero biomass")
-        elif solution.f <= 1e-3:
-            warnings.append("biomass flux %s too low" % str(solution.f))
-
-        response = {"errors": errors,
-                    "warnings": warnings,
-                    "solution_status": solution.status,
-                    "objective": str(solution.f)}
-        self.finish(dumps(response))
+        result = validate_model(model, errors=errors)
+        self.finish(dumps(result))
 
 
 prefix = r"/cobra_sbml_validator"
