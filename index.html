@@ -7,8 +7,8 @@
 <title>COBRA SBML validator</title>
 
 <!--dropzone-->
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/dropzone/4.0.1/min/dropzone.min.css" />
-<script src="https://cdnjs.cloudflare.com/ajax/libs/dropzone/4.0.1/min/dropzone.min.js"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/dropzone/4.2.0/min/dropzone.min.css" />
+<script src="https://cdnjs.cloudflare.com/ajax/libs/dropzone/4.2.0/min/dropzone.min.js"></script>
 
 <!--bootstrap-->
 <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.5/css/bootstrap.min.css">
@@ -28,7 +28,7 @@ function update_result(file, response) {
     result_list_div = document.getElementById("results");
     result_div = result_list_div.appendChild(document.createElement("div"));
     result_div.className = "row";
-    results = JSON.parse(response);
+    results = response;  // results = JSON.parse(response); (for text/html)
 
     // build the result str
     result_str = "<strong>" + file.name + "</strong>&nbsp;-&nbsp;";
