@@ -17,11 +17,6 @@ import cobra
 from validator import validate_model
 
 
-class Userform(tornado.web.RequestHandler):
-    def get(self):
-        self.render("index.html")
-
-
 class Upload(tornado.web.RequestHandler):
     def write_error(self, status_code, reason="", **kwargs):
         self.write(reason)
@@ -75,7 +70,8 @@ class Upload(tornado.web.RequestHandler):
 
         else:  # SBML validation
             try:  # this function fails if a model can not be created
-                model, errors = cobra.io.sbml3.validate_sbml_model(contents)
+                model, errors = cobra.io.sbml3.validate_sbml_model(
+                    contents, check_model=False)  # checks are run later
             except cobra.io.sbml3.CobraSBMLError as e:
                 self.send_error(415, reason=e.message)
                 return
@@ -89,14 +85,18 @@ class Upload(tornado.web.RequestHandler):
         self.finish(dumps(result))
 
 
-prefix = r"/cobra_sbml_validator"
-
-application = tornado.web.Application([
-    (prefix + r"/", Userform),
-    (prefix + r"/upload", Upload),
-    ],
-    debug=True)
-
 if __name__ == "__main__":
+    class Userform(tornado.web.RequestHandler):
+        def get(self):
+            self.render("index.html")
+
+    prefix = r"/cobra_sbml_validator"
+
+    application = tornado.web.Application([
+        (prefix + r"/", Userform),
+        (prefix + r"/upload", Upload),
+        ],
+        debug=True)
+
     application.listen(5000)
     tornado.ioloop.IOLoop.instance().start()
