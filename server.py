@@ -1,6 +1,7 @@
 from StringIO import StringIO
 from gzip import GzipFile
 from bz2 import decompress as bz2_decompress
+from tempfile import NamedTemporaryFile
 
 from json import dumps
 import re
@@ -15,6 +16,7 @@ import tornado.concurrent
 import jsonschema
 
 import cobra
+from libsbml import SBMLValidator
 
 from validator import validate_model
 
@@ -62,6 +64,27 @@ def load_SBML(contents, filename):
         return model, errors, None
 
 
+def run_libsbml_validation(contents, filename):
+    if filename.endswith(".gz"):
+        filename = filename[:-3]
+    elif filename.endswith(".bz2"):
+        filename = filename[:-4]
+    with NamedTemporaryFile(suffix=filename, delete=False) as outfile:
+        outfile.write(contents.read())
+        contents.seek(0)  # so the buffer can be re-read
+    validator = SBMLValidator()
+    validator.validate(str(outfile.name))
+    outfile.unlink(outfile.name)
+    errors = []
+    for i in range(validator.getNumFailures()):
+        failure = validator.getFailure(i)
+        if failure.isWarning():
+            continue
+        errors.append("L%d C%d: %s" % (failure.getLine(), failure.getColumn(),
+                                       failure.getMessage()))
+    return errors
+
+
 def decompress_file(body, filename):
     """returns StringIO of decompressed file"""
     if filename.endswith(".gz"):
@@ -104,6 +127,7 @@ class Upload(tornado.web.RequestHandler):
         # if the model can't be loaded from the file it's considered invalid
 
         # if not explicitly JSON, assumed to be SBML
+        warnings = []
         if filename.endswith(".json") or filename.endswith(".json.gz") or \
                 filename.endswith(".json.bz2"):
             model, errors, parse_errors = \
@@ -112,18 +136,22 @@ class Upload(tornado.web.RequestHandler):
         else:
             model, errors, parse_errors = \
                 yield executor.submit(load_SBML, contents, filename)
+            libsbml_errors = yield executor.submit(
+                run_libsbml_validation, contents, filename)
+            warnings.extend("(from libSBML) " + i for i in libsbml_errors)
 
         # if parsing failed, then send the error
         if parse_errors:
             self.send_error(415, reason=parse_errors)
             return
         elif model is None:  # parsed, but still could not generate model
-            self.finish({"errors": errors, "warnings": []})
+            self.finish({"errors": errors, "warnings": warnings})
             return
 
         # model validation
         result = yield executor.submit(validate_model, model)
         result["errors"].extend(errors)
+        result["warnings"].extend(warnings)
         self.finish(result)
 
 if __name__ == "__main__":
