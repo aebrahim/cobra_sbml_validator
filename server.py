@@ -1,11 +1,11 @@
-from StringIO import StringIO
 from gzip import GzipFile
 from bz2 import decompress as bz2_decompress
 from tempfile import NamedTemporaryFile
-
 from json import dumps
 import re
 from warnings import catch_warnings
+from os import unlink
+from codecs import getreader
 
 import tornado
 import tornado.ioloop
@@ -13,6 +13,7 @@ import tornado.web
 import tornado.gen
 import tornado.concurrent
 
+from six import BytesIO, StringIO
 import jsonschema
 
 import cobra
@@ -28,13 +29,13 @@ def load_JSON(contents):
     """returns model, [model_errors], "parse_errors" or None """
     errors = []
     try:
-        model_json = cobra.io.json.json.load(contents)
+        model_json = cobra.io.json.json.load(getreader("utf-8")(contents))
     except ValueError as e:
-        return None, errors, "Invalid JSON: " + e.message
+        return None, errors, "Invalid JSON: " + str(e)
     try:
         model = cobra.io.json._from_dict(model_json)
     except Exception as e:
-        errors.append("Invalid model: " + e.message)
+        errors.append("Invalid model: " + str(e))
         model = None
     try:
         jsonschema.validate(model_json, cobra.io.json.json_schema)
@@ -59,7 +60,7 @@ def load_SBML(contents, filename):
         model, errors = cobra.io.sbml3.validate_sbml_model(
             contents, check_model=False)  # checks are run later
     except cobra.io.sbml3.CobraSBMLError as e:
-        return None, [], e.message
+        return None, [], str(e)
     else:
         return model, errors, None
 
@@ -74,7 +75,7 @@ def run_libsbml_validation(contents, filename):
         contents.seek(0)  # so the buffer can be re-read
     validator = SBMLValidator()
     validator.validate(str(outfile.name))
-    outfile.unlink(outfile.name)
+    unlink(outfile.name)
     errors = []
     for i in range(validator.getNumFailures()):
         failure = validator.getFailure(i)
@@ -86,24 +87,23 @@ def run_libsbml_validation(contents, filename):
 
 
 def decompress_file(body, filename):
-    """returns StringIO of decompressed file"""
+    """returns BytesIO of decompressed file"""
     if filename.endswith(".gz"):
         # contents = zlib.decompress(body, 16 + zlib.MAX_WBITS)
-        contents = StringIO()
-        zip_contents = StringIO(body)
+        zip_contents = BytesIO(body)
         with GzipFile(fileobj=zip_contents, mode='rb') as zip_read:
             try:
-                contents = StringIO(zip_read.read())
-            except IOError as e:
-                return None, "Error decompressing gzip file: " + e.message
+                contents = BytesIO(zip_read.read())
+            except (IOError, OSError) as e:
+                return None, "Error decompressing gzip file: " + str(e)
         zip_contents.close()
     elif filename.endswith(".bz2"):
         try:
-            contents = StringIO(bz2_decompress(body))
+            contents = BytesIO((bz2_decompress(body)))
         except IOError as e:
-            return None, "Error decompressing bz2 file: " + e.message
+            return None, "Error decompressing bz2 file: " + str(e)
     else:
-        contents = StringIO(body)
+        contents = BytesIO((body))
     return contents, None
 
 
