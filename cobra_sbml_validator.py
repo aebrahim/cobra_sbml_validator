@@ -4,7 +4,7 @@ from tempfile import NamedTemporaryFile
 from json import dumps
 import re
 from warnings import catch_warnings
-from os import unlink
+from os import unlink, path
 from codecs import getreader
 
 import tornado
@@ -24,6 +24,9 @@ from cobra.manipulation import check_mass_balance, check_reaction_bounds, \
 from libsbml import SBMLValidator
 
 executor = tornado.concurrent.futures.ThreadPoolExecutor(8)
+
+validator_form = path.join(path.abspath(path.dirname(__file__)),
+                           "validator_form.html")
 
 
 def load_JSON(contents):
@@ -202,18 +205,36 @@ class Upload(tornado.web.RequestHandler):
         result["warnings"].extend(warnings)
         self.finish(result)
 
-if __name__ == "__main__":
-    class Userform(tornado.web.RequestHandler):
+
+class ValidatorFormHandler(tornado.web.RequestHandler):
         def get(self):
-            self.render("index.html")
+            self.render(validator_form)
 
-    prefix = r"/cobra_sbml_validator"
 
+def run_standalone_server(prefix="", port=5000, debug=False):
     application = tornado.web.Application([
-        (prefix + r"/", Userform),
+        (prefix + r"/", ValidatorFormHandler),
         (prefix + r"/upload", Upload),
         ],
         debug=True)
-
-    application.listen(5000)
+    application.listen(port)
     tornado.ioloop.IOLoop.instance().start()
+
+if __name__ == "__main__":
+    import argparse
+    parser = argparse.ArgumentParser(
+        description="web-based validator for COBRA models in SBML and JSON")
+    parser.add_argument("--port", type=int, default=5000)
+    parser.add_argument("--prefix", default="")
+    parser.add_argument("--debug", action="store_true")
+
+    args = parser.parse_args()
+
+    prefix = args.prefix
+    if len(prefix) > 0 and not prefix.startswith("/"):
+        prefix = "/" + prefix
+
+    run_standalone_server(
+        prefix=prefix,
+        port=args.port,
+        debug=args.debug)
