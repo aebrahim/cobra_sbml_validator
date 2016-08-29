@@ -1,3 +1,4 @@
 *.pyc
 gurobi.log
 *.egg-info
+nohup.out

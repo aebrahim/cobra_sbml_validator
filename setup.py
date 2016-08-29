@@ -11,4 +11,5 @@ setup(name="cobra_sbml_validator",
       py_modules=["cobra_sbml_validator"],
       description="web-based validator for COBRA models in SBML and JSON",
       package_data={'': ["validator_form.html"]},
+      install_requires=['jsonschema>=2.5.1','futures>=3.0.5'],
       license="MIT")
