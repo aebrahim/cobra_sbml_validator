@@ -1,3 +1,5 @@
+# -*- coding: utf-8 -*-
+
 from gzip import GzipFile
 from bz2 import decompress as bz2_decompress
 from tempfile import NamedTemporaryFile
@@ -6,6 +8,9 @@ import re
 from warnings import catch_warnings
 from os import unlink, path
 from codecs import getreader
+from six import BytesIO, StringIO, iteritems
+import jsonschema
+from libsbml import SBMLValidator
 
 import tornado
 import tornado.ioloop
@@ -13,15 +18,10 @@ import tornado.web
 import tornado.gen
 import tornado.concurrent
 
-from six import BytesIO, StringIO, iteritems
-import jsonschema
-
 import cobra
-from cobra.core.Gene import parse_gpr
-from cobra.manipulation import check_mass_balance, check_reaction_bounds, \
-    check_metabolite_compartment_formula
-
-from libsbml import SBMLValidator
+from cobra.core.gene import parse_gpr
+from cobra.manipulation import (check_mass_balance, check_reaction_bounds,
+                                check_metabolite_compartment_formula)
 
 executor = tornado.concurrent.futures.ThreadPoolExecutor(8)
 
@@ -37,7 +37,7 @@ def load_JSON(contents):
     except ValueError as e:
         return None, errors, "Invalid JSON: " + str(e)
     try:
-        model = cobra.io.json._from_dict(model_json)
+        model = cobra.io.model_from_dict(model_json)
     except Exception as e:
         errors.append("Invalid model: " + str(e))
         model = None
@@ -70,13 +70,14 @@ def load_SBML(contents, filename):
 
 
 def run_libsbml_validation(contents, filename):
-    if filename.endswith(".gz"):
+    if filename.endswith('.gz'):
         filename = filename[:-3]
-    elif filename.endswith(".bz2"):
+    elif filename.endswith('.bz2'):
         filename = filename[:-4]
     with NamedTemporaryFile(suffix=filename, delete=False) as outfile:
         outfile.write(contents.read())
-        contents.seek(0)  # so the buffer can be re-read
+        # So the buffer can be re-read
+        contents.seek(0)
     validator = SBMLValidator()
     validator.validate(str(outfile.name))
     unlink(outfile.name)
@@ -85,7 +86,7 @@ def run_libsbml_validation(contents, filename):
         failure = validator.getFailure(i)
         if failure.isWarning():
             continue
-        errors.append("L%d C%d: %s" % (failure.getLine(), failure.getColumn(),
+        errors.append('L%d C%d: %s' % (failure.getLine(), failure.getColumn(),
                                        failure.getMessage()))
     return errors
 
@@ -139,23 +140,25 @@ def validate_model(model):
                             (reaction.id, ", ".join(sorted(balance))))
 
     # try solving
-    solution = model.optimize(solver="esolver")
-    if solution.status != "optimal":
-        errors.append("model can not be solved (status '%s')" %
+    solution = model.optimize(solver='esolver')
+    if solution.status != 'optimal':
+        errors.append('model can not be solved (status "%s")' %
                       solution.status)
-        return {"errors": errors, "warnings": warnings}
+        return {'errors': errors, 'warnings': warnings}
 
     # if there is no objective, then we know why the objective was low
-    if len(model.objective) == 0:
-        warnings.append("model has no objective function")
+    if len(model.objective.variables) == 0:
+        warnings.append('Model has no objective function')
     elif solution.f <= 0:
-        warnings.append("model can not produce nonzero biomass")
+        warnings.append('Model can not produce nonzero biomass')
     elif solution.f <= 1e-3:
-        warnings.append("biomass flux %s too low" % str(solution.f))
-    if len(model.objective) > 1:
-        warnings.append("model should only have one reaction as the objective")
+        warnings.append('Biomass flux %s too low' % str(solution.f))
 
-    return {"errors": errors, "warnings": warnings, "objective": solution.f}
+    # Length is 2 for a single objective in cobrapy 0.6.x
+    if len(model.objective.variables) > 2:
+        warnings.append('Model should only have one reaction as the objective')
+
+    return {'errors': errors, 'warnings': warnings, 'objective': solution.f}
 
 
 class Upload(tornado.web.RequestHandler):
@@ -178,31 +181,34 @@ class Upload(tornado.web.RequestHandler):
         # if the model can't be loaded from the file it's considered invalid
 
         # if not explicitly JSON, assumed to be SBML
-        warnings = []
-        if filename.endswith(".json") or filename.endswith(".json.gz") or \
-                filename.endswith(".json.bz2"):
-            model, errors, parse_errors = \
-                yield executor.submit(load_JSON, contents)
+        errors = []; warnings = []
+        if filename.endswith('.json') or filename.endswith('.json.gz') or filename.endswith('.json.bz2'):
+            model, errors_out, parse_errors = yield executor.submit(load_JSON, contents)
+            errors.extend(errors_out)
 
         else:
-            model, errors, parse_errors = \
+            model, errors_out, parse_errors = \
                 yield executor.submit(load_SBML, contents, filename)
             libsbml_errors = yield executor.submit(
                 run_libsbml_validation, contents, filename)
-            warnings.extend("(from libSBML) " + i for i in libsbml_errors)
+            # Check whether these should be errors or warnings
+            errors.extend(errors_out['warnings'])
+            errors.extend(errors_out['validator'])
+            errors.extend(errors_out['other'])
+            warnings.extend('(from libSBML) ' + i for i in libsbml_errors)
 
         # if parsing failed, then send the error
         if parse_errors:
             self.send_error(415, reason=parse_errors)
             return
         elif model is None:  # parsed, but still could not generate model
-            self.finish({"errors": errors, "warnings": warnings})
+            self.finish({'errors': errors, 'warnings': warnings})
             return
 
         # model validation
         result = yield executor.submit(validate_model, model)
-        result["errors"].extend(errors)
-        result["warnings"].extend(warnings)
+        result['errors'].extend(errors)
+        result['warnings'].extend(warnings)
         self.finish(result)
 
 
