@@ -2,3 +2,6 @@
 gurobi.log
 *.egg-info
 nohup.out
+.mypy_cache/
+.DS_Store
+env/

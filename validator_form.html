@@ -95,15 +95,30 @@ Dropzone.options.uploader = {
 </script>
 
 <body>
+  <div class="container">
+    <div
+      class="alert alert-lg alert-success row"
+      style="text-align: center; font-size: 20px; margin-bottom: 35px;"
+    >
+      We're replacing this validator soon with <b>Memote</b>, a brand new and
+      far more powerful validator for genome-scale models.
+      <br/>
+      You can try it now at <a href="https://memote.io" class="alert-link">Memote.io</a>.
+    </div>
+
     <h1>Validate COBRA models in SBML or JSON</h1>
     <div id="dropzone" class="container">
-        <form action="upload" class="dropzone" id="uploader">
-            <div class="dz-message">Drop SBML/JSON files here or click to upload. Compressed (gz and bz2) files are also accepted.</div>
-        </form>
+      <form action="upload" class="dropzone" id="uploader">
+        <div class="dz-message">
+          Drop SBML/JSON files here or click to upload. Compressed (gz and bz2)
+          files are also accepted.
+        </div>
+      </form>
     </div>
     <div id="results" class="container"></div>
     <!-- github ribbon -->
     <a href="https://github.com/aebrahim/cobra_sbml_validator">
-        <img style="position: absolute; top: 0; right: 0; border;" src="https://camo.githubusercontent.com/a6677b08c955af8400f44c6298f40e7d19cc5b2d/68747470733a2f2f73332e616d617a6f6e6177732e636f6d2f6769746875622f726962626f6e732f666f726b6d655f72696768745f677261795f3664366436642e706e67" alt="Fork me on GitHub" data-canonical-src="https://s3.amazonaws.com/github/ribbons/forkme_right_gray_6d6d6d.png">
+      <img style="position: absolute; top: 0; right: 0; border;" src="https://camo.githubusercontent.com/a6677b08c955af8400f44c6298f40e7d19cc5b2d/68747470733a2f2f73332e616d617a6f6e6177732e636f6d2f6769746875622f726962626f6e732f666f726b6d655f72696768745f677261795f3664366436642e706e67" alt="Fork me on GitHub" data-canonical-src="https://s3.amazonaws.com/github/ribbons/forkme_right_gray_6d6d6d.png">
     </a>
+  </div>
 </body>
